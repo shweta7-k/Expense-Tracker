@@ -1,0 +1,150 @@
+import javax.swing.*;
+import java.awt.*;
+import java.io.*;
+import java.util.*;
+
+public class ExpenseTracker {
+
+    static ArrayList<String> list = new ArrayList<>();
+    static JTextArea area = new JTextArea();
+    static JLabel totalLabel = new JLabel("Total: ₹0");
+    static int total = 0;
+    static final String FILE = "expenses.txt";
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            JFrame f = new JFrame("Expense Tracker");
+
+            JTextField amount = new JTextField(10);
+            JComboBox<String> category = new JComboBox<>(new String[]{
+                    "Food","Travel","Shopping","Other"
+            });
+
+            JButton add = new JButton("Add");
+            add.setBackground(new Color(40, 167, 69)); 
+            add.setForeground(Color.WHITE);
+
+            JButton delete = new JButton("Delete");
+            delete.setBackground(new Color(220, 53, 69));
+            delete.setForeground(Color.WHITE);
+
+            // Simple panel for inputs
+            JPanel p = new JPanel();
+            p.setLayout(new GridLayout(3, 2, 8, 8));
+            p.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+            p.add(new JLabel("Amount:"));
+            p.add(amount);
+            p.add(new JLabel("Category:"));
+            p.add(category);
+            p.add(add);
+            p.add(delete);
+
+            // TEXT AREA
+            area.setEditable(false);
+            area.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+            JScrollPane scroll = new JScrollPane(area);
+
+            // BOTTOM
+            JPanel bottom = new JPanel();
+            bottom.add(totalLabel);
+
+            // MAIN
+            JPanel main = new JPanel(new BorderLayout(10, 10));
+            main.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+            main.add(p, BorderLayout.NORTH);
+            main.add(scroll, BorderLayout.CENTER);
+            main.add(bottom, BorderLayout.SOUTH);
+
+            f.setContentPane(main);
+
+            load();
+            refresh();
+
+            add.addActionListener(e -> {
+                String textAmt = amount.getText().trim();
+                if(textAmt.isEmpty()){
+                    JOptionPane.showMessageDialog(f,"Enter amount");
+                    return;
+                }
+                try {
+                    int amt = Integer.parseInt(textAmt);
+                    if(amt <= 0){
+                        JOptionPane.showMessageDialog(f,"Amount must be > 0");
+                        return;
+                    }
+                    list.add(category.getSelectedItem()+","+amt);
+                    save();
+                    refresh();
+                    amount.setText("");
+                } catch(NumberFormatException ex){
+                    JOptionPane.showMessageDialog(f,"Only numbers allowed");
+                }
+            });
+
+            delete.addActionListener(e -> {
+                String input = JOptionPane.showInputDialog("Enter index to delete:");
+                if(input == null || input.trim().isEmpty()) return;
+                try {
+                    int i = Integer.parseInt(input) - 1;
+                    if(i >= 0 && i < list.size()){
+                        list.remove(i);
+                        save();
+                        refresh();
+                    } else {
+                        JOptionPane.showMessageDialog(f,"Invalid index");
+                    }
+                } catch(NumberFormatException ex){
+                    JOptionPane.showMessageDialog(f,"Enter valid number");
+                }
+            });
+
+            f.setSize(400, 400);
+            f.setLocationRelativeTo(null);
+            f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            f.setVisible(true);
+        });
+    }
+
+    static void load(){
+        list.clear();
+        try(BufferedReader br = new BufferedReader(new FileReader(FILE))){
+            String line;
+            while((line = br.readLine()) != null){
+                if(line.contains(",")) list.add(line);
+            }
+        } catch(IOException e){
+            System.out.println("No existing expenses or read error: " + e.getMessage());
+        }
+    }
+
+    static void save(){
+        try(BufferedWriter bw = new BufferedWriter(new FileWriter(FILE))){
+            for(String s : list){
+                bw.write(s);
+                bw.newLine();
+            }
+        } catch(IOException e){
+            JOptionPane.showMessageDialog(null,"Save Error");
+        }
+    }
+
+    static void refresh(){
+        area.setText("");
+        total = 0;
+
+        for(int i=0;i<list.size();i++){
+            try {
+                String[] p = list.get(i).split(",");
+                int amt = Integer.parseInt(p[1]);
+
+                total += amt;
+                area.append((i+1)+". "+p[0]+" - ₹"+amt+"\n");
+
+            } catch(Exception e){
+                System.out.println("Error parsing expense line at index " + i + ": " + e.getMessage());
+            }
+        }
+
+        totalLabel.setText("Total: ₹"+total);
+    }
+}
